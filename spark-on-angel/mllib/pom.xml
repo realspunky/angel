@@ -68,13 +68,7 @@
       <dependency>
           <groupId>com.tencent.angel</groupId>
           <artifactId>angel-ps-graph</artifactId>
-          <version>3.2.0</version>
-          <scope>compile</scope>
-      </dependency>
-      <dependency>
-          <groupId>com.tencent.angel</groupId>
-          <artifactId>angel-ps-graph</artifactId>
-          <version>3.3.0</version>
+          <version>${project.version}</version>
           <scope>compile</scope>
       </dependency>
   </dependencies>
