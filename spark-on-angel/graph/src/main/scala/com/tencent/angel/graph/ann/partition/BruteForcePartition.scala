@@ -14,42 +14,26 @@
  * the License.
  *
  */
-package com.tencent.angel.graph.ann.algo
+package com.tencent.angel.graph.ann.partition
 
-import com.tencent.angel.graph.ann.{Item, ProgressListener}
-import com.tencent.angel.graph.ann.index.HnswIndex
-import com.tencent.angel.graph.ann.index.HnswIndex.HnswIndexBuilder
+import com.tencent.angel.graph.ann.index.BruteForceIndex
+import com.tencent.angel.graph.ann.{ANNPSModel, DistanceFunctions}
 import org.apache.spark.broadcast.Broadcast
 
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+import com.tencent.angel.graph.ann.index.Index
 
-class HnswPartition(sheetId: Int,
-                    partIndex: Int,
-                    graphKeys: Array[Long],
-                    hnswIndex: HnswIndex,
-                    val vectors: Array[Array[Float]])
-  extends Serializable {
+class BruteForcePartition(sheetId: Int,
+                          partIndex: Int,
+                          val keys: Array[Long],
+                          val vectors: Array[Array[Float]],
+                          val bfModel: Index)
+  extends ANNPartition(sheetId, partIndex) with Serializable {
 
-  def buildGraph(): HnswPartition = {
-    println(s"start building graph part")
-    val timePartBuildGraph = System.currentTimeMillis()
-    val items = graphKeys.zip(vectors).map { it =>
-      new Item(it._1, it._2)
-    }
-
-    hnswIndex.addAll(items, new ProgressListener((done, max) =>
-      println(s"$done of $max vectors have been added")))
-    println(s"part $partIndex build graph index cost: ${(System.currentTimeMillis() - timePartBuildGraph) / 1000.0} s")
-    new HnswPartition(sheetId, partIndex, graphKeys, hnswIndex, vectors)
-  }
-
-  def setSheetId(id: Int): HnswPartition = {
-    new HnswPartition(id, partIndex, graphKeys, hnswIndex, vectors)
-  }
-
-  def process(psModel: HnswPSModel, queryIds: Broadcast[Array[Long]],
+  def process(psModel: ANNPSModel, queryIds: Broadcast[Array[Long]],
               topK: Int, batchSize: Int): Unit = {
-    println(s"sheet $sheetId part $partIndex process ${queryIds.value.length} queries with ${hnswIndex.distanceFunction.getName}")
+    println(s"sheet $sheetId part $partIndex process ${queryIds.value.length} queries with ${bfModel.distanceFunction.getName}")
 
     var batchCnt = 0
     var batchTime = System.currentTimeMillis()
@@ -60,14 +44,12 @@ class HnswPartition(sheetId: Int,
       val t2 = System.currentTimeMillis()
       val iter = queries.entrySet().iterator()
       val searchRes = new ArrayBuffer[(Long, Array[(Long, Float)])]()
+
       while (iter.hasNext) {
         val entry = iter.next()
         val key = entry.getKey
         val value = entry.getValue
-        val neighbors = hnswIndex.findNearest(value, topK)
-        if (neighbors.nonEmpty) {
-          searchRes += ((key, neighbors))
-        }
+        searchRes.append((key, findNearest(value, topK)))
       }
 
       val t3 = System.currentTimeMillis()
@@ -83,21 +65,43 @@ class HnswPartition(sheetId: Int,
         println(s"part $partIndex, $batchCnt batches done, cost ${(System.currentTimeMillis() - batchTime) / 1000.0} s")
         batchTime = System.currentTimeMillis()
       }
+
     }
   }
 
+  override def setSheetId(id: Int): BruteForcePartition = {
+    new BruteForcePartition(id, partIndex, keys, vectors, bfModel)
+  }
+
+  def findNearest(vec: Array[Float], k: Int): Array[(Long, Float)] = {
+    implicit val ord: Ordering[(Long, Float)] = Ordering.by(_._2)
+    // max heap
+    val candidates = new mutable.PriorityQueue[(Long, Float)]()(ord)
+
+    vectors.indices.foreach{ idx =>
+      val distance = bfModel.distanceFunction.distance(vectors(idx), vec)
+      if (candidates.size < k) {
+        candidates.enqueue((keys(idx), distance))
+      }
+      else if (candidates.head._2 > distance) {
+        candidates.dequeue()
+        candidates.enqueue((keys(idx), distance))
+      }
+    }
+    candidates.toArray.sortBy(_._2)
+  }
 }
 
-object HnswPartition {
-  def apply(index: Int, iter: Iterator[(Long, Array[Float])], indexBuilder: HnswIndexBuilder): HnswPartition = {
+object BruteForcePartition {
+  def apply(index: Int, iter: Iterator[(Long, Array[Float])], distanceFunc: String): BruteForcePartition = {
     val partData = iter.toArray
     val keys = partData.map(_._1)
     val vectors = partData.map(_._2)
 
-    val hnswIndex = new HnswIndex()
-    hnswIndex.hnswIndexBuilder(indexBuilder)
+    val disFunc = DistanceFunctions.str2DistanceFunction(distanceFunc)
+    val bfIndex = new BruteForceIndex()
+    bfIndex.setDistanceFunc(disFunc)
 
-    new HnswPartition(0, index, keys, hnswIndex, vectors)
+    new BruteForcePartition(0, index, keys, vectors, bfIndex)
   }
-
 }

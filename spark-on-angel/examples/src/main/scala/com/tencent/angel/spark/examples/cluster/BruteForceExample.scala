@@ -16,16 +16,16 @@
  */
 package com.tencent.angel.spark.examples.cluster
 
-import com.tencent.angel.graph.ann.algo.Hnsw
+import com.tencent.angel.graph.ann.algo.BruteForce
 import com.tencent.angel.graph.ann.utils.DataUtils
 import com.tencent.angel.graph.utils.GraphIO
 import com.tencent.angel.spark.context.PSContext
 import com.tencent.angel.spark.ml.core.ArgsUtil
+import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.storage.StorageLevel
-import org.apache.spark.{SparkConf, SparkContext}
 
-object HnswExample {
+object BruteForceExample {
   def main(args: Array[String]): Unit = {
     val params = ArgsUtil.parse(args)
     val mode = params.getOrElse("mode", "yarn-cluster")
@@ -68,14 +68,7 @@ object HnswExample {
       case "tab" => "\t"
     }
 
-    val ef = params.getOrElse("ef", "40").toInt
-    val efConstruction = params.getOrElse("efConstruction", "40").toInt
-    val M = params.getOrElse("M", "16").toInt
-    val maxM = params.getOrElse("maxM", s"$M").toInt
-    val maxM0 = params.getOrElse("maxM0", s"${2 * M}").toInt
-    val mL = params.getOrElse("mL", s"${1 / Math.log(M)}").toDouble
-
-    val hnsw = new Hnsw()
+    val bruteforce = new BruteForce()
       .setTopK(topK)
       .setStorageLevel(storageLevel)
       .setPartitionNum(partitionNum)
@@ -88,17 +81,11 @@ object HnswExample {
       .setBatchSize(batchSize)
       .setQueryPartitionNum(queryPartitionNum)
       .setSheetsNum(sheetsNum)
-      .setM(M)
-      .setEf(ef)
-      .setEfConstruction(efConstruction)
-      .setMaxM(maxM)
-      .setMaxM0(maxM0)
-      .setML(mL)
 
     val ss = SparkSession.builder().getOrCreate()
-    val df = DataUtils.loadVectors(ss, vectorPath, itemSep)
+    val df = DataUtils.loadVectors(ss, vectorPath, itemSep).repartition(partitionNum)
 
-    val retDF = hnsw.transform(df)
+    val retDF = bruteforce.transform(df)
 
     println(s"start to save")
     DataUtils.saveResult(retDF, outputPath, saveItemSep)
@@ -106,11 +93,12 @@ object HnswExample {
     stop()
   }
 
+
   def start(mode: String): SparkContext = {
     val conf = new SparkConf()
 
     // Add jvm parameters for executors
-    if (!mode.startsWith("local")) {
+    if (!mode.contains("local")) {
       var executorJvmOptions = conf.get("spark.executor.extraJavaOptions")
       executorJvmOptions += " -XX:ConcGCThreads=4 -XX:ParallelGCThreads=4 -Xss4M "
       conf.set("spark.executor.extraJavaOptions", executorJvmOptions)
@@ -118,7 +106,7 @@ object HnswExample {
     }
 
     conf.setMaster(mode)
-    conf.setAppName("HNSW")
+    conf.setAppName("BruteForce")
     val sc = new SparkContext(conf)
     sc
   }
