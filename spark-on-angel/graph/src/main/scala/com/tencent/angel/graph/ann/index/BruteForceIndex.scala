@@ -14,23 +14,6 @@
  * the License.
  *
  */
-package com.tencent.angel.graph.ann.params
+package com.tencent.angel.graph.ann.index
 
-import org.apache.spark.ml.param.{IntParam, Params}
-
-trait HasItemIdx extends Params {
-  /**
-    * Param for item index in tdw.
-    *
-    * @group param
-    */
-  final val itemIdx = new IntParam(this, "itemIdx", "param for item index in tdw")
-  
-  /** @group getParam */
-  final def getItemIdx: Int = $(itemIdx)
-  
-  setDefault(itemIdx, 0)
-  
-  /** @group setParam */
-  final def setItemIdx(m: Int): this.type = set(itemIdx, m)
-}
+class BruteForceIndex extends Index with Serializable

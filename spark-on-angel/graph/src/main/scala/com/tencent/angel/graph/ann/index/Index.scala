@@ -14,23 +14,14 @@
  * the License.
  *
  */
-package com.tencent.angel.graph.ann.params
+package com.tencent.angel.graph.ann.index
 
-import org.apache.spark.ml.param.{IntParam, Params}
+import com.tencent.angel.graph.ann.{DistanceFunction, DistanceFunctions}
 
-trait HasVecIdx extends Params {
-  /**
-    * Param for vec index in tdw.
-    *
-    * @group param
-    */
-  final val vecIdx = new IntParam(this, "vecIdx", "param for vec index in tdw")
-  
-  /** @group getParam */
-  final def getVecIdx: Int = $(vecIdx)
-  
-  setDefault(vecIdx, 0)
-  
-  /** @group setParam */
-  final def setVecIdx(m: Int): this.type = set(vecIdx, m)
+trait Index {
+  var distanceFunction: DistanceFunction = new DistanceFunctions.FloatL2Distance
+  var distanceComparator: Ordering[Float] = Ordering.fromLessThan[Float]((a, b) => a < b)
+  def setDistanceFunc(distFunc: DistanceFunction): Unit = {
+    this.distanceFunction = distFunc
+  }
 }

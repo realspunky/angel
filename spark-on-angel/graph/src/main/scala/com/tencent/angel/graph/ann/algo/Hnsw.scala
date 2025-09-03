@@ -16,12 +16,14 @@
  */
 package com.tencent.angel.graph.ann.algo
 
+import com.tencent.angel.graph.ann.ANNModel
 import com.tencent.angel.graph.ann.index.HnswIndex
 import org.apache.spark.ml.util.Identifiable
 import org.apache.spark.sql.{DataFrame, Dataset}
 import com.tencent.angel.graph.ann.params.{HasEf, HasEfConstruction, HasM, HasML, HasMaxM, HasMaxM0, _}
+import com.tencent.angel.graph.ann.partition.HnswPartition
 
-class Hnsw(override val uid: String) extends HnswModel
+class Hnsw(override val uid: String) extends ANNModel[HnswPartition]
   with HasM with HasEfConstruction with HasEf with HasMaxM with HasMaxM0 with HasML {
   
   def this() = this(Identifiable.randomUID("HNSW"))
