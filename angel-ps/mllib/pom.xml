@@ -22,7 +22,7 @@
     <parent>
         <groupId>com.tencent.angel</groupId>
         <artifactId>angel-ps</artifactId>
-        <version>3.2.0</version>
+        <version>3.3.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>angel-ps-mllib</artifactId>
@@ -34,12 +34,6 @@
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.13.1</version>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>angel-ps-core</artifactId>
@@ -55,6 +49,5 @@
             <artifactId>angel-ps-psf</artifactId>
             <version>${project.version}</version>
         </dependency>
-
     </dependencies>
 </project>

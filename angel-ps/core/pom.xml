@@ -22,7 +22,7 @@
     <parent>
         <groupId>com.tencent.angel</groupId>
         <artifactId>angel-ps</artifactId>
-        <version>3.2.0</version>
+        <version>3.3.0</version>
     </parent>
     <artifactId>angel-ps-core</artifactId>
     <name>angel-ps-core</name>
@@ -45,8 +45,8 @@
         </dependency>
         <dependency>
             <groupId>org.scalanlp</groupId>
-            <artifactId>breeze_2.11</artifactId>
-            <version>0.13.1</version>
+            <artifactId>breeze_${scala.binary.version}</artifactId>
+            <version>1.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
